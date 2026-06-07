@@ -1,2 +1,2 @@
-# hpr-rs
+# HPR-RS
 HPR but in rust
