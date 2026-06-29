@@ -1,0 +1,23 @@
+[package]
+name = "HPR"
+version = "0.1.0"
+edition = "2024"
+authors = ["Plexescor <saraswal2010@gmail.com>"]
+description = "An offline zero account activity tracker(Rust Rewrite)"
+build = "build.rs"
+
+[dependencies]
+slint = "1.16.1" 
+
+[profile.release]
+opt-level = "z"     
+lto = true          
+codegen-units = 1   
+panic = "abort"     
+strip = true        
+
+
+[build-dependencies]
+slint-build = "1.16.1" 
+
+[workspace]

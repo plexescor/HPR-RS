@@ -1,0 +1,894 @@
+import { DatePickerPopup, Palette as StdPalette } from "std-widgets.slint";
+import { LiveDot } from "./live-dot.slint";
+import { SidebarButton } from "./side-bar-button.slint";
+import { DataView } from "./data-view.slint";
+import { InsightsView } from "./insights-view.slint";
+import { TabView } from "./tab-view.slint";
+import { ProjectView } from "./project-view.slint";
+import { ExtensionsView, LoadedExtension_S } from "./extension-view.slint";
+import { AboutView } from "./about-view.slint";
+import { GoalsView } from "./goals-view.slint";
+import { HistoryRangeView } from "./history-range-view.slint";
+import { TimelineView } from "./timeline-view.slint";
+import { SettingsView } from "./settings-view.slint";
+import { Palette } from "./palette.slint";
+import { Card } from "./card.slint";
+import { FeedbackView } from "./feedback-view.slint";
+import { ThemesView } from "./themes-view.slint";
+import { MiscImageView } from "./misc-image-view.slint";
+
+
+
+import { TimeLog, SwitchHistory, TimeLog_Tab, TimeLog_Project, AppGoalData, TimelineBlock, TimelineMarker } from "./types.slint";
+
+
+// ── Main Window ──────────────────────────────────────────────────────────────
+export component MainWindow inherits Window {
+    no-frame: root.no-title-bar-enabled;
+    background: root.no-title-bar-enabled ? transparent : Palette.background;
+    callback start_drag();
+    callback minimize_window();
+    callback close_window();
+
+    callback loadHistoricalData_Singular(string);
+    callback loadHistoricalData_Number(int, string);
+    callback loadHistoricalData_Range(string, string, string);
+    callback loadInsights;
+    callback loadLiveData;
+    callback tabViewClicked;
+    callback siteViewClicked;
+    callback rawViewClicked;
+    callback filterViewClicked;
+    callback refreshExtensions;
+    callback disableExtension(string, string);
+    callback reloadExtension(string, string);
+    callback reloadUi;
+    callback openReleases;
+    callback openIssues;
+    callback setConfig(string, string);
+    callback openUrl(string);
+    callback sendFeedback(string, string);
+
+    callback miscKeyPressed_S(string);
+    callback miscKeyReleased_S(string);
+
+    //PLS Donate and dont remove it!
+    callback openKofi;
+
+    callback setLimit(string, int);
+    callback setGoal(string, int);
+
+    callback themeSelected(string);
+    callback themeApply(string);
+    callback refreshThemes();
+
+    in-out property <bool> is-sending-feedback: false;
+    in-out property <bool> showFeedbackResultPrompt: false;
+    in-out property <bool> feedbackSuccess: false;
+    in-out property <string> feedbackErrorMsg: "";
+    in-out property <string> feedbackEmail: "";
+    in-out property <string> feedbackMessage: "";
+
+    in property <float>           trackedTime_S;
+    in property <float>           trackedTime_Tab_S;
+    in property <string>          windowName_S;
+    in property <[TimeLog]>       timePerApp_S;
+    in property <[SwitchHistory]> switchHistory_S;
+    in property <[TimeLog_Tab]>     timePerTab_S;
+    in property <[TimeLog_Project]> timePerProject_S;
+    in property <[LoadedExtension_S]> loadedExtensions_S;
+    in property <float>             trackedTime_Project_S;
+    in property <[AppGoalData]>          rawApps_S;
+    in property <[TimelineBlock]>        timelineBlocks_S;
+    in-out property <int>                timelinePresetHours: 24;
+    in-out property <int>                timelineStartHour: 0;
+    in-out property <int>                timelineEndHour: 24;
+    in property <[TimelineMarker]>       timelineMarkers_S;
+    in-out property <float>              timelineZoomFactor: 1.0;
+    in property <bool>                   showMiscImagePanel_S;
+    in property <image>                  miscImage_S;
+
+    // Theme properties
+    in property <string>          themeMode_S;
+    in property <bool>            autostart_S;
+    in property <bool>            headless_S;
+    in property <bool>            trueHeadless_S;
+    in property <bool>            telemetry_S;
+    in property <bool>            no-title-bar-enabled;
+    in property <float>           cornerRoundness_S;
+    in property <bool>            showTelemetryPrompt_S;
+    in-out property <float>       uiScale_S <=> Palette.ui-scale;
+    in-out property <bool>        isDarkMode <=> Palette.is-dark;
+
+    in property <bool>            killApps_S;
+    in property <bool>            hardwareAccel_S;
+    in property <bool>            allowCustomBackends_S;
+    in property <bool>            allowNetworkActivity_S;
+
+    in property <bool>            allowSidebarCustomization_S;
+    in property <bool>            hideSidebarReload_S;
+    in property <bool>            hideSidebarLimits_S;
+    in property <bool>            hideSidebarHistory_S;
+    in property <bool>            hideSidebarTimeline_S;
+    in property <bool>            hideSidebarTab_S;
+    in property <bool>            hideSidebarProject_S;
+    in property <bool>            hideSidebarInsights_S;
+    in property <bool>            hideSidebarLive_S;
+    in property <bool>            hideSidebarExtensions_S;
+    in property <bool>            hideSidebarKofi_S;
+    in property <bool>            hideSidebarFeedback_S;
+    in property <bool>            hideSidebarAbout_S;
+    in property <bool>            hideSidebarThemes_S;
+
+    in property <bool>            themesAvailable_S;
+    in property <[string]>        themesList_S;
+    in property <[image]>         themePreviewImages_S;
+    in property <int>             themePreviewImageCount_S;
+    in property <string>          hprVersion_S;
+    in property <string>          themeVersion_S;
+    in property <bool>            useThemesEnabled_S;
+    in property <string>          currentTheme_S;
+    in property <string>          activeTheme_S;
+
+    in property <string>          nowPlayingTitle_S;
+    in property <string>          nowPlayingUrl_S;
+
+    init => {
+        StdPalette.color-scheme = isDarkMode ? ColorScheme.dark : ColorScheme.light;
+    }
+
+    changed isDarkMode => {
+        StdPalette.color-scheme = isDarkMode ? ColorScheme.dark : ColorScheme.light;
+    }
+
+    //Stuff for insights view: 
+    in property <string>          mostUsedApp_S;
+    in property <string>          totalTrackedTime_S;
+    in property <string>          totalSwitches_S;
+    in property <string>          mostSwitchedFrom_S;
+    in property <string>          mostSwitchedTo_S;
+    in property <string>          longestFocus_S;
+    in property <string>          peakHour_S;
+
+    // Advanced cross-day insight properties
+    in property <string>          escapePattern_S;
+    in property <string>          returnRate_S;
+    in property <string>          avgFocusSession_S;
+    in property <string>          mostDistractedDay_S;
+    in property <string>          productiveDays_S;
+    in property <string>          screenTimeVsAvg_S;
+    in property <string>          focusDipHour_S;
+    in property <string>          deepWorkBeforeNoon_S;
+    in property <string>          weekendVsWeekday_S;
+
+    in property <string>          cpuUsage;
+    in property <string>          ramUsage;
+    in property <string>          loadedExtensions;
+    in property <string>          activeThreads;
+
+    //As "LIVE" isnt accurate cz main view can also show historical data
+    //so i renamed to it "DATA"
+    property <string> active-view: "DATA";
+    property <string> current-view-mode: "Live";
+
+    title: "HPR";
+    default-font-size: 13px * Palette.scale;
+    preferred-width: 780px * Palette.scale;
+    preferred-height: 626px * Palette.scale;
+
+    date-picker := DatePickerPopup {
+        x: (root.width - self.width) / 2;
+        y: (root.height - self.height) / 2;
+        close-policy: PopupClosePolicy.no-auto-close;
+        accepted(date) => {
+            root.loadHistoricalData_Singular(
+                (date.day < 10 ? "0" : "") + date.day + "-" +
+                (date.month < 10 ? "0" : "") + date.month + "-" +
+                (Math.mod(date.year, 100) < 10 ? "0" : "") + Math.mod(date.year, 100)
+            );
+            root.current-view-mode = "Historical: " + 
+                ((date.day < 10 ? "0" : "") + date.day + "-" +
+                (date.month < 10 ? "0" : "") + date.month + "-" +
+                (Math.mod(date.year, 100) < 10 ? "0" : "") + Math.mod(date.year, 100));
+            date-picker.close();
+        }
+        canceled => { date-picker.close(); }
+    }
+
+    // ── Root container ────────────────────────────────────────────────────
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: Palette.background;
+        border-radius: root.no-title-bar-enabled ? root.cornerRoundness_S * 16px * Palette.scale : 0px;
+        clip: true;
+
+        // ── Main content ──────────────────────────────────────────────────
+        VerticalLayout {
+            x: 0px;
+            y: 0px;
+            width: parent.width;
+            height: parent.height;
+            padding: 0px;
+            spacing: 0px;
+
+            // ── Topbar ───────────────────────────────────────────────────
+            topbar := Rectangle {
+            height: 46px * Palette.scale;
+            background: Palette.background;
+
+
+                Rectangle {
+                    y: parent.height - 1px * Palette.scale;
+                    height: 1px * Palette.scale;
+                    background: @linear-gradient(90deg, transparent 0%, Palette.divider 40%, Palette.divider 60%, transparent 100%);
+                }
+
+                HorizontalLayout {
+                    padding-left: 18px * Palette.scale;
+                    padding-right: 18px * Palette.scale;
+                    alignment: space-between;
+
+                    HorizontalLayout {
+                        spacing: 10px * Palette.scale;
+                        alignment: start;
+
+                        Text {
+                            text: "HPR";
+                            color: Palette.text-primary;
+                            font-size: 12px * Palette.scale;
+                            font-weight: 700;
+                            letter-spacing: 4px * Palette.scale;
+                            vertical-alignment: center;
+                        }
+
+                        Rectangle {
+                            width: 1px * Palette.scale;
+                            height: 12px * Palette.scale;
+                            background: Palette.divider;
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        Text {
+                            text: "Human Pattern Recorder";
+                            color: Palette.text-muted;
+                            font-size: 11px * Palette.scale;
+                            letter-spacing: 0.3px * Palette.scale;
+                            vertical-alignment: center;
+                        }
+
+                        if current-view-mode != "" : Rectangle {
+                            background: current-view-mode == "Live" ? #22c55e15 : #ef444415;
+                            border-color: current-view-mode == "Live" ? #22c55e60 : #ef444460;
+                            border-width: 1px * Palette.scale;
+                            border-radius: 4px * Palette.scale;
+                            height: 18px * Palette.scale;
+                            width: mode-text.preferred-width + 12px * Palette.scale;
+                            y: (parent.height - self.height) / 2;
+
+                            mode-text := Text {
+                                text: root.current-view-mode;
+                                color: current-view-mode == "Live" ? #4ade80 : #f87171;
+                                font-size: 10px * Palette.scale;
+                                font-weight: 700;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 0px;
+                        alignment: end;
+
+                        // Active-window pill — shown only in native title-bar mode
+                        Rectangle {
+                            visible: !root.no-title-bar-enabled;
+                            height: !root.no-title-bar-enabled ? 26px * Palette.scale : 0px;
+                            width: !root.no-title-bar-enabled ? (active-lbl.preferred-width + 30px * Palette.scale) : 0px;
+                            border-radius: 13px * Palette.scale;
+                            background: Palette.sidebar-btn-bg;
+                            border-width: 1px * Palette.scale;
+                            border-color: Palette.sidebar-btn-border;
+                            y: (parent.height - self.height) / 2;
+
+                            HorizontalLayout {
+                                padding-left: 9px * Palette.scale;
+                                spacing: 6px * Palette.scale;
+                                alignment: start;
+
+                                LiveDot {
+                                    y: (parent.height - self.height) / 2;
+                                    is-alert: windowName_S.character-count > 84;
+                                }
+
+                                active-lbl := Text {
+                                    text: windowName_S;
+                                    color: Palette.text-secondary;
+                                    font-size: 11px * Palette.scale;
+                                    font-weight: 500;
+                                    vertical-alignment: center;
+                                    wrap: no-wrap;
+                                    overflow: elide;
+                                    max-width: 550px * Palette.scale;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Close Button — shown only in frameless mode
+                Rectangle {
+                    visible: root.no-title-bar-enabled;
+                    x: parent.width - self.width - 18px * Palette.scale;
+                    y: (parent.height - self.height) / 2;
+                    width: 24px * Palette.scale;
+                    height: 24px * Palette.scale;
+                    border-radius: 12px * Palette.scale;
+                    background: ta-close.pressed ? Palette.sidebar-btn-bg : (ta-close.has-hover ? Palette.sidebar-btn-bg : transparent);
+                    border-width: 1px * Palette.scale;
+                    border-color: ta-close.has-hover ? Palette.sidebar-btn-border : transparent;
+
+                    ta-close := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.close_window(); }
+                    }
+
+                    Text {
+                        text: "×";
+                        font-size: 18px * Palette.scale;
+                        font-weight: 500;
+                        color: Palette.text-secondary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            // ── Body ─────────────────────────────────────────────────────
+            if active-view == "DATA" : DataView {
+                vertical-stretch: 1;
+                trackedTime_S: root.trackedTime_S;
+                timePerApp_S: root.timePerApp_S;
+                switchHistory_S: root.switchHistory_S;
+                switch-to-live-clicked => { root.loadLiveData(); root.current-view-mode = "Live"; }
+            }
+            
+            if active-view == "INSIGHTS" : InsightsView {
+                vertical-stretch: 1;
+                mostUsedApp_S: root.mostUsedApp_S;
+                totalTrackedTime_S: root.totalTrackedTime_S;
+                totalSwitches_S: root.totalSwitches_S;
+                mostSwitchedFrom_S: root.mostSwitchedFrom_S;
+                mostSwitchedTo_S: root.mostSwitchedTo_S;
+                longestFocus_S: root.longestFocus_S;
+                peakHour_S: root.peakHour_S;
+                escapePattern_S: root.escapePattern_S;
+                returnRate_S: root.returnRate_S;
+                avgFocusSession_S: root.avgFocusSession_S;
+                mostDistractedDay_S: root.mostDistractedDay_S;
+                productiveDays_S: root.productiveDays_S;
+                screenTimeVsAvg_S: root.screenTimeVsAvg_S;
+                focusDipHour_S: root.focusDipHour_S;
+                deepWorkBeforeNoon_S: root.deepWorkBeforeNoon_S;
+                weekendVsWeekday_S: root.weekendVsWeekday_S;
+                load-insights => { root.loadInsights(); }
+            }
+
+            if active-view == "TAB" : TabView {
+                vertical-stretch: 1;
+                timePerTab_S: root.timePerTab_S;
+                trackedTime_S: root.trackedTime_Tab_S;
+                per-tab-clicked => { root.tabViewClicked(); }
+                per-site-clicked => { root.siteViewClicked(); }
+            }
+
+            if active-view == "PROJECT" : ProjectView {
+                vertical-stretch: 1;
+                timePerProject_S: root.timePerProject_S;
+                trackedTime_S: root.trackedTime_Project_S;
+                raw-view-clicked => { root.rawViewClicked(); }
+                filter-view-clicked => { root.filterViewClicked(); }
+            }
+            if active-view == "EXTENSIONS" : ExtensionsView {
+                vertical-stretch: 1;
+                loadedExtensions_S: root.loadedExtensions_S;
+                refresh-extensions => { root.refreshExtensions(); }
+                disable-extension(author, name) => { root.disableExtension(author, name); }
+                reload-extension(author, name) => { root.reloadExtension(author, name); }
+            }
+            if active-view == "MISC_IMAGE" : MiscImageView {
+                vertical-stretch: 1;
+                misc-image: root.miscImage_S;
+                keyPressed_S(key) => { root.miscKeyPressed_S(key); }
+                keyReleased_S(key) => { root.miscKeyReleased_S(key); }
+            }
+            if active-view == "LIMITS" : GoalsView {
+                vertical-stretch: 1;
+                raw-apps: root.rawApps_S;
+                set-limit(name, mins) => { root.setLimit(name, mins); }
+                set-goal(name, mins) => { root.setGoal(name, mins); }
+            }
+            if active-view == "ABOUT" : AboutView { 
+                cpu-usage: root.cpuUsage;
+                ram-usage: root.ramUsage;
+                loaded-extensions: root.loadedExtensions;
+                active-threads: root.activeThreads;
+                now-playing-title: root.nowPlayingTitle_S;
+                now-playing-url: root.nowPlayingUrl_S;
+                open-kofi => { root.openKofi(); } 
+                open-releases => { root.openReleases(); }
+                open-issues => { root.openIssues(); }
+                open-now-playing(url) => { root.openUrl(url); }
+            }
+            if active-view == "HISTORY_RANGE" : HistoryRangeView {
+                vertical-stretch: 1;
+                load-historical-data-singular(date) => { 
+                    root.loadHistoricalData_Singular(date); 
+                    root.current-view-mode = "Historical: " + date;
+                }
+                load-historical-data-number(days, mode) => { 
+                    root.loadHistoricalData_Number(days, mode); 
+                    root.current-view-mode = "Historical: last " + days + " days";
+                }
+                load-historical-data-range(start, end, mode) => { 
+                    root.loadHistoricalData_Range(start, end, mode); 
+                    root.current-view-mode = "Historical: " + start + " — " + end;
+                }
+            }
+            if active-view == "TIMELINE" : TimelineView {
+                vertical-stretch: 1;
+                timelineBlocks: root.timelineBlocks_S;
+                timelinePresetHours <=> root.timelinePresetHours;
+                timelineStartHour <=> root.timelineStartHour;
+                timelineEndHour <=> root.timelineEndHour;
+                timelineMarkers: root.timelineMarkers_S;
+                timelineZoomFactor <=> root.timelineZoomFactor;
+            }
+            if active-view == "THEMES" : ThemesView {
+                vertical-stretch: 1;
+                themesAvailable: root.themesAvailable_S;
+                themesList: root.themesList_S;
+                themePreviewImages: root.themePreviewImages_S;
+                themePreviewImageCount: root.themePreviewImageCount_S;
+                currentTheme: root.currentTheme_S;
+                activeTheme: root.activeTheme_S;
+                appVersion: root.hprVersion_S;
+                themeVersion: root.themeVersion_S;
+                useThemesEnabled: root.useThemesEnabled_S;
+
+                themeSelected(theme) => { root.themeSelected(theme); }
+                themeApply(theme) => { root.themeApply(theme); }
+                refresh-themes => { root.refreshThemes(); }
+            }
+            if active-view == "SETTINGS" : SettingsView {
+                themeMode_S: root.themeMode_S;
+                autostart_S: root.autostart_S;
+                headless_S: root.headless_S;
+                trueHeadless_S: root.trueHeadless_S;
+                telemetry_S: root.telemetry_S;
+                noTitleBar_S: root.no-title-bar-enabled;
+                cornerRoundness_S: root.cornerRoundness_S;
+                uiScale_S: root.uiScale_S;
+                killApps_S: root.killApps_S;
+                hardwareAccel_S: root.hardwareAccel_S;
+                allowCustomBackends_S: root.allowCustomBackends_S;
+                allowNetworkActivity_S: root.allowNetworkActivity_S;
+                useInterpreter_S: root.useThemesEnabled_S;
+                setConfig(param, val) => { root.setConfig(param, val); }
+                allowSidebarCustomization_S: root.allowSidebarCustomization_S;
+                hideSidebarReload_S: root.hideSidebarReload_S;
+                hideSidebarLimits_S: root.hideSidebarLimits_S;
+                hideSidebarHistory_S: root.hideSidebarHistory_S;
+                hideSidebarTimeline_S: root.hideSidebarTimeline_S;
+                hideSidebarTab_S: root.hideSidebarTab_S;
+                hideSidebarProject_S: root.hideSidebarProject_S;
+                hideSidebarInsights_S: root.hideSidebarInsights_S;
+                hideSidebarLive_S: root.hideSidebarLive_S;
+                hideSidebarExtensions_S: root.hideSidebarExtensions_S;
+                hideSidebarKofi_S: root.hideSidebarKofi_S;
+                hideSidebarFeedback_S: root.hideSidebarFeedback_S;
+                hideSidebarAbout_S: root.hideSidebarAbout_S;
+                hideSidebarThemes_S: root.hideSidebarThemes_S;
+                showMiscImagePanel_S: root.showMiscImagePanel_S;
+            }
+            if active-view == "FEEDBACK" : FeedbackView {
+                vertical-stretch: 1;
+                email <=> root.feedbackEmail;
+                message <=> root.feedbackMessage;
+                is-sending: root.is-sending-feedback;
+                send-clicked(email, message) => {
+                    root.sendFeedback(email, message);
+                }
+            }
+
+        }
+
+        // ── Drag handle ───────────────────────────────────────────────────
+        // Outside the VerticalLayout so the layout engine cannot override its
+        // width. 85% wide × 12px tall, pinned to top-left of the root Rectangle.
+        drag-ta := TouchArea {
+            x: 0px;
+            y: 0px;
+            z: 5;
+            width: root.no-title-bar-enabled ? root.width * 0.87 : 0px;
+            height: root.no-title-bar-enabled ? 25.2px * Palette.scale : 0px;
+            enabled: root.no-title-bar-enabled;
+            pointer-event(event) => {
+                if (event.button == PointerEventButton.left && event.kind == PointerEventKind.down) {
+                    root.start_drag();
+                }
+            }
+        }
+
+        // ── Floating Sidebar ──────────────────────────────────────────────
+        sidebar-ta := TouchArea {
+            x: 0px;
+            y: 0px;
+            z: 10;
+            width: self.has-hover ? 54px * Palette.scale : 14px * Palette.scale;
+            height: parent.height;
+            animate width { duration: 180ms; easing: ease-in-out; }
+
+            Rectangle {
+                x: 0px;
+                width: 100%;
+                height: 100%;
+
+                background: sidebar-ta.has-hover ? Palette.sidebar-bg : transparent;
+                animate background { duration: 240ms; easing: ease-in-out; }
+
+                Rectangle {
+                    x: parent.width - 1px * Palette.scale;
+                    width: 1px * Palette.scale;
+                    height: parent.height;
+                    background: sidebar-ta.has-hover ? Palette.sidebar-border : transparent;
+                    animate background { duration: 240ms; easing: ease-in-out; }
+                }
+
+                Rectangle {
+                    visible: !sidebar-ta.has-hover;
+                    x: 0px;
+                    y: (parent.height - self.height) / 2;
+                    width: 14px * Palette.scale;
+                    height: 28px * Palette.scale;
+                    border-radius: 4.5px * Palette.scale;
+                    background: Palette.sidebar-btn-bg;
+                    border-width: 1px * Palette.scale;
+                    border-color: Palette.sidebar-btn-border;
+
+                    Text {
+                        text: "›";
+                        color: Palette.text-muted;
+                        font-size: 16px * Palette.scale;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        width: 100%;
+                        height: 100%;
+                    }
+                }
+
+                VerticalLayout {
+                    visible: sidebar-ta.has-hover;
+                    padding: 2px * Palette.scale;
+                    spacing: 8px * Palette.scale;
+                    alignment: center;
+                    width: 75%;
+                    height: 100%;
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarReload_S : SidebarButton {
+                        icon: @image-url("./images/reload.svg");
+                        icon-light: @image-url("./images/reload-light.svg");
+                        tip: "Reload UI";
+                        clicked => { root.reloadUi(); }
+                    }
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarLimits_S : SidebarButton {
+                        icon: @image-url("./images/goals.svg");
+                        icon-light: @image-url("./images/goals-light.svg");
+                        tip: "Manage per app limits and goals";
+                        clicked => { root.active-view = "LIMITS"; }
+                    }
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarHistory_S : SidebarButton {
+                        icon: @image-url("./images/calendar.svg");
+                        icon-light: @image-url("./images/calendar-light.svg");
+                        tip: "View historical data";
+                        clicked => { root.active-view = "HISTORY_RANGE"; }
+                    }
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarTimeline_S : SidebarButton {
+                        icon: @image-url("./images/timeline.svg");
+                        icon-light: @image-url("./images/timeline-light.svg");
+                        tip: "View day timeline";
+                        clicked => { root.active-view = "TIMELINE"; }
+                    }
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarTab_S : SidebarButton {
+                        icon: @image-url("./images/tab.svg");
+                        icon-light: @image-url("./images/tab-light.svg");
+                        tip: "View usage per tab";
+                        clicked => { root.active-view = "TAB"; }
+                    }
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarProject_S : SidebarButton {
+                        icon: @image-url("./images/project.svg");
+                        icon-light: @image-url("./images/project-light.svg");
+                        tip: "View usage per project";
+                        clicked => { root.active-view = "PROJECT"; }
+                    }
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarInsights_S : SidebarButton {
+                        icon: @image-url("./images/insights.svg");
+                        icon-light: @image-url("./images/insights-light.svg");
+                        tip: "View insights";
+                        clicked => { root.active-view = "INSIGHTS"; root.loadInsights(); }
+                    }
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarLive_S : SidebarButton {
+                        icon: @image-url("./images/live.svg");
+                        icon-light: @image-url("./images/live-light.svg");
+                        tip: "Switch to live view";
+                        clicked => { root.active-view = "DATA" }
+                    }
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarExtensions_S : SidebarButton {
+                        icon: @image-url("./images/extension.svg");
+                        icon-light: @image-url("./images/extension-light.svg");
+                        tip: "View loaded extensions";
+                        clicked => { root.active-view = "EXTENSIONS"; }
+                    }
+
+                    if root.showMiscImagePanel_S : SidebarButton {
+                        icon: @image-url("./images/misc-image.svg");
+                        icon-light: @image-url("./images/misc-image-light.svg");
+                        tip: "Miscellaneous Image Panel";
+                        clicked => { root.active-view = "MISC_IMAGE"; }
+                    }
+
+                    SidebarButton {
+                        icon: @image-url("./images/settings.svg");
+                        icon-light: @image-url("./images/settings-light.svg");
+                        tip: "Settings";
+                        clicked => { root.active-view = "SETTINGS"; }
+                    }
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarThemes_S : SidebarButton {
+                        icon: @image-url("./images/themes.svg");
+                        icon-light: @image-url("./images/themes-light.svg");
+                        tip: "Themes";
+                        clicked => { root.active-view = "THEMES"; }
+                    }
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarKofi_S : SidebarButton {
+                        icon: @image-url("./images/ko-fi.svg");
+                        icon-light: @image-url("./images/ko-fi-light.svg");
+                        tip: "Support on Ko-fi";
+                        clicked => { root.openKofi(); }
+                    }
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarFeedback_S : SidebarButton {
+                        icon: @image-url("./images/message.svg");
+                        icon-light: @image-url("./images/message-light.svg");
+                        tip: "Send Feedback";
+                        clicked => { root.active-view = "FEEDBACK"; }
+                    }
+
+                    if !root.allowSidebarCustomization_S || !root.hideSidebarAbout_S : SidebarButton {
+                        icon: @image-url("./images/about.svg");
+                        icon-light: @image-url("./images/about-light.svg");
+                        tip: "About";
+                        clicked => { root.active-view = "ABOUT"; }
+                    }
+                }
+            }
+        }
+
+        if showTelemetryPrompt_S : Rectangle {
+            background: #000000cc;
+            z: 100;
+            width: 100%;
+            height: 100%;
+
+            TouchArea {
+                // block click through
+            }
+
+            Card {
+                width: 440px * Palette.scale;
+                height: 250px * Palette.scale;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+
+                VerticalLayout {
+                    padding: 24px * Palette.scale;
+                    spacing: 16px * Palette.scale;
+                    alignment: space-between;
+
+                    VerticalLayout {
+                        spacing: 6px * Palette.scale;
+
+                        Text {
+                            text: "PRIVACY & ANALYTICS";
+                            font-size: 8px * Palette.scale;
+                            font-weight: 800;
+                            letter-spacing: 2.5px * Palette.scale;
+                            color: #38bdf8;
+                            horizontal-alignment: center;
+                        }
+
+                        Text {
+                            text: "Help Improve HPR?";
+                            font-size: 18px * Palette.scale;
+                            font-weight: 800;
+                            letter-spacing: 0.5px * Palette.scale;
+                            color: Palette.text-primary;
+                            horizontal-alignment: center;
+                        }
+                    }
+
+                    Text {
+                        text: "HPR is local-first. We would like to collect two anonymous numbers: total unique installations and the frequency of regular weekly users. No window titles, websites, or personal data ever leave your machine.";
+                        font-size: 11px * Palette.scale;
+                        font-weight: 500;
+                        color: Palette.text-secondary;
+                        wrap: word-wrap;
+                        horizontal-alignment: center;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 16px * Palette.scale;
+                        alignment: center;
+
+                        // Decline
+                        decl-btn := Rectangle {
+                            width: 130px * Palette.scale;
+                            height: 32px * Palette.scale;
+                            border-radius: 6px * Palette.scale;
+                            border-width: 1px * Palette.scale;
+                            border-color: Palette.card-border;
+                            background: ta-decl.pressed ? Palette.input-bg-press : 
+                                        ta-decl.has-hover ? Palette.input-bg-hover : 
+                                        Palette.input-bg;
+
+                            animate background { duration: 100ms; }
+                            animate border-color { duration: 100ms; }
+
+                            ta-decl := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    root.setConfig("anonymous-telemetry", "false");
+                                }
+                            }
+
+                            Text {
+                                text: "NO THANKS";
+                                font-size: 9px * Palette.scale;
+                                font-weight: 800;
+                                letter-spacing: 1.5px * Palette.scale;
+                                color: Palette.text-primary;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        // Agree
+                        agree-btn := Rectangle {
+                            width: 130px * Palette.scale;
+                            height: 32px * Palette.scale;
+                            border-radius: 6px * Palette.scale;
+                            background: ta-agree.pressed ? @linear-gradient(135deg, #0284c7 0%, #0369a1 100%) : 
+                                        ta-agree.has-hover ? @linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%) : 
+                                        @linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+
+                            ta-agree := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    root.setConfig("anonymous-telemetry", "true");
+                                }
+                            }
+
+                            Text {
+                                text: "I AGREE";
+                                font-size: 9px * Palette.scale;
+                                font-weight: 800;
+                                letter-spacing: 1.5px * Palette.scale;
+                                color: #ffffff;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if showFeedbackResultPrompt : Rectangle {
+            background: #000000cc;
+            z: 100;
+            width: 100%;
+            height: 100%;
+
+            TouchArea {
+                // block click through
+            }
+
+            Card {
+                width: 440px * Palette.scale;
+                height: 240px * Palette.scale;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+
+                VerticalLayout {
+                    padding: 24px * Palette.scale;
+                    spacing: 16px * Palette.scale;
+                    alignment: space-between;
+
+                    VerticalLayout {
+                        spacing: 6px * Palette.scale;
+
+                        Text {
+                            text: root.feedbackSuccess ? "SUCCESS" : "ERROR";
+                            font-size: 8px * Palette.scale;
+                            font-weight: 800;
+                            letter-spacing: 2.5px * Palette.scale;
+                            color: root.feedbackSuccess ? #10b981 : #ef4444;
+                            horizontal-alignment: center;
+                        }
+
+                        Text {
+                            text: root.feedbackSuccess ? "Message Sent" : "Sending Failed";
+                            font-size: 18px * Palette.scale;
+                            font-weight: 800;
+                            letter-spacing: 0.5px * Palette.scale;
+                            color: Palette.text-primary;
+                            horizontal-alignment: center;
+                        }
+                    }
+
+                    Text {
+                        text: root.feedbackSuccess 
+                            ? "Thank you! Your message has been successfully sent to the developer."
+                            : "Could not send the message: " + root.feedbackErrorMsg + ". Please check your connection and try again.";
+                        font-size: 11px * Palette.scale;
+                        font-weight: 500;
+                        color: Palette.text-secondary;
+                        wrap: word-wrap;
+                        horizontal-alignment: center;
+                    }
+
+                    HorizontalLayout {
+                        alignment: center;
+
+                        // OK Button
+                        ok-btn := Rectangle {
+                            width: 130px * Palette.scale;
+                            height: 32px * Palette.scale;
+                            border-radius: 6px * Palette.scale;
+                            background: ta-ok.pressed ? @linear-gradient(135deg, #0284c7 0%, #0369a1 100%) : 
+                                        ta-ok.has-hover ? @linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%) : 
+                                        @linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+
+                            ta-ok := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    root.showFeedbackResultPrompt = false;
+                                }
+                            }
+
+                            Text {
+                                text: "OK";
+                                font-size: 9px * Palette.scale;
+                                font-weight: 800;
+                                letter-spacing: 1.5px * Palette.scale;
+                                color: #ffffff;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,221 @@
+import { Card } from "./card.slint";
+import { SectionHeader } from "./section-header.slint";
+import { Palette } from "./palette.slint";
+
+export struct LoadedExtension_S {
+    author-name: string,
+    extension-name: string,
+}
+
+export component ExtensionsView {
+    in property <[LoadedExtension_S]> loadedExtensions_S;
+
+    callback refresh-extensions();
+    callback disable-extension(string, string);
+    callback reload-extension(string, string);
+
+    VerticalLayout {
+        padding: 12px * Palette.scale;
+        padding-top: 6px * Palette.scale;
+        spacing: 10px * Palette.scale;
+
+        HorizontalLayout {
+            alignment: space-between;
+            vertical-stretch: 0;
+            padding-top: 4px * Palette.scale;
+
+            SectionHeader { label: "EXTENSIONS"; }
+
+            refreshBtn := Rectangle {
+                width: 72px * Palette.scale;
+                height: 26px * Palette.scale;
+                border-radius: 6px * Palette.scale;
+                border-width: 1px * Palette.scale;
+
+                animate background { duration: 100ms; }
+                animate border-color { duration: 100ms; }
+
+                ta-refresh := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.refresh-extensions(); }
+                }
+
+                states [
+                    pressed when ta-refresh.pressed: {
+                        background: #34d39935;
+                        border-color: #34d39980;
+                    }
+                    hovered when ta-refresh.has-hover: {
+                        background: #34d39925;
+                        border-color: #34d39960;
+                    }
+                    normal when !ta-refresh.has-hover: {
+                        background: #34d39912;
+                        border-color: #34d39935;
+                    }
+                ]
+
+                Text {
+                    //thing is refresh seemed liek refreshing the page
+                    //but its not so i renamed to rescan which is more accurate
+                    //though all the code still treats as "REFRSH" button for refrencing functions
+                    //and i didnt want to do any refactors
+                    text: "RESCAN";
+                    font-size: 8px * Palette.scale;
+                    font-weight: 700;
+                    letter-spacing: 2px * Palette.scale;
+                    color: ta-refresh.pressed ? #a7f3d0 : ta-refresh.has-hover ? #6ee7b7 : #34d399;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    animate color { duration: 100ms; }
+                }
+            }
+        }
+
+        Flickable {
+            vertical-stretch: 1;
+            interactive: true;
+            viewport-height: extContent.preferred-height;
+
+            extContent := VerticalLayout {
+                width: 100%;
+                spacing: 8px * Palette.scale;
+
+                if loadedExtensions_S.length == 0 : Card {
+                    height: 64px * Palette.scale;
+                    HorizontalLayout {
+                        padding: 16px * Palette.scale;
+                        alignment: center;
+                        Text {
+                            text: "NO EXTENSIONS LOADED";
+                            font-size: 9px * Palette.scale;
+                            font-weight: 700;
+                            letter-spacing: 2.5px * Palette.scale;
+                            color: Palette.text-muted;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                for ext in loadedExtensions_S : Card {
+                    height: 72px * Palette.scale;
+
+                    HorizontalLayout {
+                        padding: 14px * Palette.scale;
+                        spacing: 12px * Palette.scale;
+                        alignment: space-between;
+
+                        VerticalLayout {
+                            alignment: space-between;
+                            vertical-stretch: 1;
+
+                            Text {
+                                text: ext.author-name;
+                                font-size: 10px * Palette.scale;
+                                font-weight: 700;
+                                letter-spacing: 1.5px * Palette.scale;
+                                color: #c084fc;
+                            }
+
+                            Text {
+                                text: ext.extension-name;
+                                font-size: 13px * Palette.scale;
+                                font-weight: 600;
+                                color: #a3e635;
+                            }
+                        }
+
+                        
+                        HorizontalLayout {
+                            alignment: center;
+                            spacing: 6px * Palette.scale;
+                            y: (parent.height - self.height) / 1.5;
+
+                            disableBtn := Rectangle {
+                                width: 66px * Palette.scale;
+                                height: 28px * Palette.scale;
+                                border-radius: 6px * Palette.scale;
+                                border-width: 1px * Palette.scale;
+
+                                animate background { duration: 100ms; }
+                                animate border-color { duration: 100ms; }
+
+                                ta-disable := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.disable-extension(ext.author-name, ext.extension-name); }
+                                }
+
+                                states [
+                                    pressed when ta-disable.pressed: {
+                                        background: #ff605c35;
+                                        border-color: #ff605c80;
+                                    }
+                                    hovered when ta-disable.has-hover: {
+                                        background: #ff605c25;
+                                        border-color: #ff605c60;
+                                    }
+                                    normal when !ta-disable.has-hover: {
+                                        background: #ff605c12;
+                                        border-color: #ff605c35;
+                                    }
+                                ]
+
+                                Text {
+                                    text: "DISABLE";
+                                    font-size: 8px * Palette.scale;
+                                    font-weight: 700;
+                                    letter-spacing: 1.5px * Palette.scale;
+                                    color: ta-disable.pressed ? #ff8582 : ta-disable.has-hover ? #ff7572 : #ff605c;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                    animate color { duration: 100ms; }
+                                }
+                            }
+
+                            reloadBtn := Rectangle {
+                                width: 66px * Palette.scale;
+                                height: 28px * Palette.scale;
+                                border-radius: 6px * Palette.scale;
+                                border-width: 1px * Palette.scale;
+
+                                animate background { duration: 100ms; }
+                                animate border-color { duration: 100ms; }
+
+                                ta-reload := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.reload-extension(ext.author-name, ext.extension-name); }
+                                }
+
+                                states [
+                                    pressed when ta-reload.pressed: {
+                                        background: #38bdf835;
+                                        border-color: #38bdf880;
+                                    }
+                                    hovered when ta-reload.has-hover: {
+                                        background: #38bdf825;
+                                        border-color: #38bdf860;
+                                    }
+                                    normal when !ta-reload.has-hover: {
+                                        background: #38bdf812;
+                                        border-color: #38bdf835;
+                                    }
+                                ]
+
+                                Text {
+                                    text: "RELOAD";
+                                    font-size: 8px * Palette.scale;
+                                    font-weight: 700;
+                                    letter-spacing: 1.5px * Palette.scale;
+                                    color: ta-reload.pressed ? #7dd8fb : ta-reload.has-hover ? #5dcffa : #38bdf8;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                    animate color { duration: 100ms; }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

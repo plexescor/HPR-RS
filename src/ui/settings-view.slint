@@ -1,0 +1,584 @@
+import { Card } from "./card.slint";
+import { SectionHeader } from "./section-header.slint";
+import { Palette } from "./palette.slint";
+import { Switch, Slider } from "std-widgets.slint";
+
+
+component ThemeOptionButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> active;
+    callback clicked;
+
+    height: 32px * Palette.scale;
+    border-radius: 6px * Palette.scale;
+    border-width: 1px * Palette.scale;
+    border-color: active ? #38bdf8 : Palette.card-border;
+    background: active ? #38bdf815 : (ta.has-hover ? Palette.row-bg-hover : transparent);
+    
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+
+    Text {
+        text: label;
+        font-size: 11px * Palette.scale;
+        font-weight: 700;
+        letter-spacing: 1.5px * Palette.scale;
+        color: active ? #38bdf8 : Palette.text-primary;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// Divider helper
+component Divider inherits Rectangle {
+    height: 1px * Palette.scale;
+    background: Palette.divider;
+}
+
+// A standard label+description row paired with a Switch
+component ToggleSetting inherits HorizontalLayout {
+    in property <string> label;
+    in property <string> description;
+    in property <string> warning-text: "";
+    in property <bool> checked;
+    callback toggled(bool);
+
+    alignment: space-between;
+    spacing: 12px * Palette.scale;
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 4px * Palette.scale;
+        Text {
+            text: label;
+            font-size: 13px * Palette.scale;
+            font-weight: 600;
+            color: Palette.text-primary;
+        }
+        Text {
+            text: description;
+            font-size: 11px * Palette.scale;
+            color: Palette.text-secondary;
+            wrap: word-wrap;
+        }
+        if warning-text != "" : Text {
+            text: warning-text;
+            font-size: 13px * Palette.scale;
+            font-weight: 700;
+            color: #ff5c5c;
+            wrap: word-wrap;
+        }
+    }
+
+    Switch {
+        checked: root.checked;
+        toggled => { root.toggled(self.checked); }
+    }
+}
+
+export component SettingsView {
+    in property <string> themeMode_S;
+    in property <bool> autostart_S;
+    in property <bool> headless_S;
+    in property <bool> telemetry_S;
+    in property <bool> noTitleBar_S;
+    in property <float> cornerRoundness_S;
+    in property <float> uiScale_S;
+    in property <bool> killApps_S;
+    in property <bool> hardwareAccel_S;
+    in property <bool> allowCustomBackends_S;
+    in property <bool> allowNetworkActivity_S;
+    in property <bool> showMiscImagePanel_S;
+    in property <bool> trueHeadless_S;
+    callback setConfig(string, string);
+
+    in property <bool> allowSidebarCustomization_S;
+    in property <bool> hideSidebarReload_S;
+    in property <bool> hideSidebarLimits_S;
+    in property <bool> hideSidebarHistory_S;
+    in property <bool> hideSidebarTimeline_S;
+    in property <bool> hideSidebarTab_S;
+    in property <bool> hideSidebarProject_S;
+    in property <bool> hideSidebarInsights_S;
+    in property <bool> hideSidebarLive_S;
+    in property <bool> hideSidebarExtensions_S;
+    in property <bool> hideSidebarKofi_S;
+    in property <bool> hideSidebarFeedback_S;
+    in property <bool> hideSidebarAbout_S;
+    in property <bool> hideSidebarThemes_S;
+    in property <bool> useInterpreter_S;
+
+    Flickable {
+        viewport-height: settingsContent.preferred-height;
+
+        settingsContent := VerticalLayout {
+
+            padding: 12px * Palette.scale;
+            padding-top: 6px * Palette.scale;
+            spacing: 10px * Palette.scale;
+
+            HorizontalLayout {
+                alignment: start;
+                vertical-stretch: 0;
+                padding-top: 4px * Palette.scale;
+
+                SectionHeader { label: "SETTINGS"; }
+            }
+
+            // ── APPEARANCE ────────────────────────────────────────────────
+            Card {
+                VerticalLayout {
+                    padding: 24px * Palette.scale;
+                    spacing: 16px * Palette.scale;
+
+                    Text {
+                        text: "APPEARANCE";
+                        font-size: 8px * Palette.scale;
+                        font-weight: 700;
+                        letter-spacing: 2.5px * Palette.scale;
+                        color: Palette.text-muted;
+                    }
+
+                    ToggleSetting {
+                        label: "Enable Custom UI Themes";
+                        description: "Load UI dynamically from config directory at runtime instead of using compiled-in UI.";
+                        checked: root.useInterpreter_S;
+                        toggled(v) => { root.setConfig("use-interpreter", v ? "true" : "false"); }
+                    }
+
+                    Divider {}
+
+                    HorizontalLayout {
+                        alignment: space-between;
+                        spacing: 12px * Palette.scale;
+
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 4px * Palette.scale;
+                            Text {
+                                text: "Theme Mode";
+                                font-size: 13px * Palette.scale;
+                                font-weight: 600;
+                                color: Palette.text-primary;
+                            }
+                            Text {
+                                text: "Select your preferred visual style for HPR";
+                                font-size: 11px * Palette.scale;
+                                color: Palette.text-secondary;
+                            }
+                        }
+
+                        HorizontalLayout {
+                            alignment: end;
+                            spacing: 8px * Palette.scale;
+                            width: 180px * Palette.scale;
+                            y: (parent.height - self.height) / 2;
+
+                            ThemeOptionButton {
+                                label: "DARK";
+                                active: themeMode_S == "dark";
+                                width: 80px * Palette.scale;
+                                clicked => {
+                                    root.setConfig("theme", "dark");
+                                }
+                            }
+
+                            ThemeOptionButton {
+                                label: "LIGHT";
+                                active: themeMode_S == "light";
+                                width: 80px * Palette.scale;
+                                clicked => {
+                                    root.setConfig("theme", "light");
+                                }
+                            }
+                        }
+                    }
+
+                    Divider {}
+
+                    VerticalLayout {
+                        spacing: 8px * Palette.scale;
+                        padding-top: 8px * Palette.scale;
+                        padding-bottom: 8px * Palette.scale;
+
+                        HorizontalLayout {
+                            alignment: space-between;
+                            VerticalLayout {
+                                spacing: 4px * Palette.scale;
+                                Text {
+                                    text: "UI Scale";
+                                    font-size: 13px * Palette.scale;
+                                    font-weight: 600;
+                                    color: Palette.text-primary;
+                                }
+                                Text {
+                                    text: "Adjust the size of the interface elements";
+                                    font-size: 11px * Palette.scale;
+                                    color: Palette.text-secondary;
+                                }
+                            }
+                            Text {
+                                text: Math.round(root.uiScale_S * 100) + "%";
+                                font-size: 13px * Palette.scale;
+                                font-weight: 600;
+                                color: Palette.text-secondary;
+                            }
+                        }
+
+                        Slider {
+                            minimum: 0.01;
+                            maximum: 1.0;
+                            value: root.uiScale_S;
+                            changed(v) => {
+                                root.setConfig("ui-scale", "\{v}");
+                            }
+                        }
+                    }
+
+                    Divider {}
+
+                    ToggleSetting {
+                        label: "No Title Bar";
+                        description: "Remove standard OS frame & title bar for a borderless window.";
+                        warning-text: "WARNING: This setting is EXTREMELY experimental and unstable; you may not be able to resize or full-screen HPR's window when enabled.";
+                        checked: root.noTitleBar_S;
+                        toggled(v) => { root.setConfig("no-title-bar", v ? "true" : "false"); }
+                    }
+
+                    if root.noTitleBar_S : VerticalLayout {
+                        spacing: 8px * Palette.scale;
+                        padding-top: 8px * Palette.scale;
+                        padding-bottom: 8px * Palette.scale;
+
+                        HorizontalLayout {
+                            alignment: space-between;
+                            Text {
+                                text: "Window Corner Roundness";
+                                
+                                font-size: 13px * Palette.scale;
+                                font-weight: 600;
+                                color: Palette.text-primary;
+                            }
+                            Text {
+                                text: Math.round(root.cornerRoundness_S * 100) + "%";
+                                font-size: 13px * Palette.scale;
+                                font-weight: 600;
+                                color: Palette.text-secondary;
+                            }
+                        }
+
+                        Slider {
+                            minimum: 0.0;
+                            maximum: 1.0;
+                            value: root.cornerRoundness_S;
+                            changed(v) => {
+                                root.setConfig("corner-roundness", "\{v}");
+                            }
+                        }
+                    }
+
+                    Divider {}
+
+                    ToggleSetting {
+                        label: "Customize Sidebar Buttons";
+                        description: "Enable this to hide specific sidebar buttons you don't use";
+                        checked: root.allowSidebarCustomization_S;
+                        toggled(v) => { root.setConfig("allow-sidebar-customization", v ? "true" : "false"); }
+                    }
+
+                    if root.allowSidebarCustomization_S : VerticalLayout {
+                        spacing: 16px * Palette.scale;
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show Reload UI Button";
+                            description: "Toggle visibility of the Reload UI button in the sidebar";
+                            checked: !root.hideSidebarReload_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-reload", (!v) ? "true" : "false"); }
+                        }
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show Limits Button";
+                            description: "Toggle visibility of the Limits and Goals button in the sidebar";
+                            checked: !root.hideSidebarLimits_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-limits", (!v) ? "true" : "false"); }
+                        }
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show History Button";
+                            description: "Toggle visibility of the Historical Data button in the sidebar";
+                            checked: !root.hideSidebarHistory_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-history", (!v) ? "true" : "false"); }
+                        }
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show Timeline Button";
+                            description: "Toggle visibility of the Day Timeline button in the sidebar";
+                            checked: !root.hideSidebarTimeline_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-timeline", (!v) ? "true" : "false"); }
+                        }
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show Tab Usage Button";
+                            description: "Toggle visibility of the Usage per Tab button in the sidebar";
+                            checked: !root.hideSidebarTab_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-tab", (!v) ? "true" : "false"); }
+                        }
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show Project Usage Button";
+                            description: "Toggle visibility of the Usage per Project button in the sidebar";
+                            checked: !root.hideSidebarProject_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-project", (!v) ? "true" : "false"); }
+                        }
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show Insights Button";
+                            description: "Toggle visibility of the Insights button in the sidebar";
+                            checked: !root.hideSidebarInsights_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-insights", (!v) ? "true" : "false"); }
+                        }
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show Live View Button";
+                            description: "Toggle visibility of the Live/Data View button in the sidebar";
+                            checked: !root.hideSidebarLive_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-live", (!v) ? "true" : "false"); }
+                        }
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show Extensions Button";
+                            description: "Toggle visibility of the Extensions button in the sidebar";
+                            checked: !root.hideSidebarExtensions_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-extensions", (!v) ? "true" : "false"); }
+                        }
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show Support on Ko-fi Button";
+                            description: "Toggle visibility of the Ko-fi support button in the sidebar";
+                            checked: !root.hideSidebarKofi_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-kofi", (!v) ? "true" : "false"); }
+                        }
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show Feedback Button";
+                            description: "Toggle visibility of the Send Feedback button in the sidebar";
+                            checked: !root.hideSidebarFeedback_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-feedback", (!v) ? "true" : "false"); }
+                        }
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show Themes Button";
+                            description: "Toggle visibility of the Themes button in the sidebar";
+                            checked: !root.hideSidebarThemes_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-themes", (!v) ? "true" : "false"); }
+                        }
+
+                        Divider {}
+
+                        ToggleSetting {
+                            label: "Show About Button";
+                            description: "Toggle visibility of the About button in the sidebar";
+                            checked: !root.hideSidebarAbout_S;
+                            toggled(v) => { root.setConfig("hide-sidebar-about", (!v) ? "true" : "false"); }
+                        }
+                    }
+                }
+            }
+
+            // ── SYSTEM BEHAVIOR ───────────────────────────────────────────
+            Card {
+                VerticalLayout {
+                    padding: 24px * Palette.scale;
+                    spacing: 16px * Palette.scale;
+
+                    Text {
+                        text: "SYSTEM BEHAVIOR";
+                        font-size: 8px * Palette.scale;
+                        font-weight: 700;
+                        letter-spacing: 2.5px * Palette.scale;
+                        color: Palette.text-muted;
+                    }
+
+                    ToggleSetting {
+                        label: "Autostart on Boot";
+                        description: "Automatically launch HPR when you log into your system";
+                        checked: root.autostart_S;
+                        toggled(v) => { root.setConfig("autostart", v ? "true" : "false"); }
+                    }
+
+                    Divider {}
+
+                    ToggleSetting {
+                        label: "Start Headless";
+                        description: "Start hidden in the system tray without opening the main window";
+                        checked: root.headless_S;
+                        toggled(v) => { root.setConfig("headless-mode", v ? "true" : "false"); }
+                    }
+
+                    Divider {}
+
+                    ToggleSetting {
+                        label: "True Headless Mode";
+                        description: "Enabling this mode runs HPR with extremely barebones and minimal resource usage by running in the background without allocating any UI windows or tray icon resources.";
+                        warning-text: "WARNING: True Headless Mode completely disables the GUI and system tray icon to run HPR with absolute minimum resource usage. HPR will run invisibly in the background. The ONLY way to stop HPR is to kill its process (e.g., using killall HPR). To disable this mode, you must manually edit config.csv and set 'true-headless-mode' to 'false'.";
+                        checked: root.trueHeadless_S;
+                        toggled(v) => { root.setConfig("true-headless-mode", v ? "true" : "false"); }
+                    }
+                }
+            }
+
+            // ── TRACKING ─────────────────────────────────────────────────
+            Card {
+                VerticalLayout {
+                    padding: 24px * Palette.scale;
+                    spacing: 16px * Palette.scale;
+
+                    Text {
+                        text: "TRACKING";
+                        font-size: 8px * Palette.scale;
+                        font-weight: 700;
+                        letter-spacing: 2.5px * Palette.scale;
+                        color: Palette.text-muted;
+                    }
+
+                    ToggleSetting {
+                        label: "Kill Apps on Limit";
+                        description: "Automatically terminate applications when their configured daily time limit is exceeded";
+                        checked: root.killApps_S;
+                        toggled(v) => { root.setConfig("kill-apps", v ? "true" : "false"); }
+                    }
+                }
+            }
+
+            // ── EXTENSIONS ───────────────────────────────────────────────
+            Card {
+                VerticalLayout {
+                    padding: 24px * Palette.scale;
+                    spacing: 16px * Palette.scale;
+
+                    Text {
+                        text: "EXTENSIONS";
+                        font-size: 8px * Palette.scale;
+                        font-weight: 700;
+                        letter-spacing: 2.5px * Palette.scale;
+                        color: Palette.text-muted;
+                    }
+
+                    ToggleSetting {
+                        label: "Allow Custom Backends";
+                        description: "Let Lua extensions register dynamic tracking backends to replace or supplement the built-in window tracker";
+                        checked: root.allowCustomBackends_S;
+                        toggled(v) => { root.setConfig("allow-custom-backends", v ? "true" : "false"); }
+                    }
+
+                    Divider {}
+
+                    ToggleSetting {
+                        label: "Show Miscellaneous Image Panel";
+                        description: "Show a dedicated panel in HPR sidebar allowing extensions to render custom RGBA frames.";
+                        checked: root.showMiscImagePanel_S;
+                        toggled(v) => { root.setConfig("show-misc-image-panel", v ? "true" : "false"); }
+                    }
+                }
+            }
+
+            // ── PERFORMANCE ───────────────────────────────────────────────
+            Card {
+                VerticalLayout {
+                    padding: 24px * Palette.scale;
+                    spacing: 16px * Palette.scale;
+
+                    Text {
+                        text: "PERFORMANCE";
+                        font-size: 8px * Palette.scale;
+                        font-weight: 700;
+                        letter-spacing: 2.5px * Palette.scale;
+                        color: Palette.text-muted;
+                    }
+
+                    ToggleSetting {
+                        label: "Hardware Acceleration";
+                        description: "Use GPU-accelerated rendering for the UI. Disable only if you see visual glitches. Requires restart";
+                        checked: root.hardwareAccel_S;
+                        toggled(v) => { root.setConfig("hardware-acceleration", v ? "true" : "false"); }
+                    }
+                }
+            }
+
+            // ── PRIVACY & ANALYTICS ───────────────────────────────────────
+            Card {
+                VerticalLayout {
+                    padding: 24px * Palette.scale;
+                    spacing: 16px * Palette.scale;
+
+                    Text {
+                        text: "PRIVACY & ANALYTICS";
+                        font-size: 8px * Palette.scale;
+                        font-weight: 700;
+                        letter-spacing: 2.5px * Palette.scale;
+                        color: Palette.text-muted;
+                    }
+
+                    ToggleSetting {
+                        label: "Anonymous Analytics";
+                        description: "Send anonymous telemetry to help improve HPR (only reports total users and weekly active counts)";
+                        checked: root.telemetry_S;
+                        toggled(v) => { root.setConfig("anonymous-telemetry", v ? "true" : "false"); }
+                    }
+                }
+            }
+
+            // ── NETWORK ───────────────────────────────────────────────────
+            Card {
+                VerticalLayout {
+                    padding: 24px * Palette.scale;
+                    spacing: 16px * Palette.scale;
+
+                    Text {
+                        text: "NETWORK";
+                        font-size: 8px * Palette.scale;
+                        font-weight: 700;
+                        letter-spacing: 2.5px * Palette.scale;
+                        color: Palette.text-muted;
+                    }
+
+                    ToggleSetting {
+                        label: "Allow Network Activity";
+                        description: "Enable or disable all outgoing HTTP requests (YouTube Now Playing & Telemetry & Extensions' network activities).";
+                        checked: root.allowNetworkActivity_S;
+                        toggled(v) => { root.setConfig("allow-network-activity", v ? "true" : "false"); }
+                    }
+                }
+            }
+        }
+    }
+}

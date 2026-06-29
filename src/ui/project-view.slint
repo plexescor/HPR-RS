@@ -1,0 +1,231 @@
+import { Card } from "./card.slint";
+import { SectionHeader } from "./section-header.slint";
+import { TimeLog_Project } from "./types.slint";
+import { Palette } from "./palette.slint";
+
+component ProjectRow inherits Rectangle {
+    in property <string> project-title;
+    in property <string> duration;
+    in property <float>  ratio;
+    in property <bool>   is-even;
+    in property <int>    row-index;
+    in property <color>  bar-color;
+
+    height: 48px * Palette.scale;
+    border-radius: 5px * Palette.scale;
+    clip: true;
+
+    background: ta.has-hover ? Palette.row-bg-hover : (is-even ? Palette.row-bg-even : transparent);
+    animate background { duration: 100ms; easing: ease-out; }
+
+    HorizontalLayout {
+        padding-left: 16px * Palette.scale;
+        padding-right: 14px * Palette.scale;
+        spacing: 12px * Palette.scale;
+
+        Text {
+            text: (row-index + 1) + ".";
+            color: Palette.row-number;
+            font-size: 10px * Palette.scale;
+            font-weight: 600;
+            vertical-alignment: center;
+            width: 18px * Palette.scale;
+        }
+
+        Rectangle {
+            width: 3px * Palette.scale;
+            height: 20px * Palette.scale;
+            border-radius: 2px * Palette.scale;
+            background: ta.has-hover ? bar-color : bar-color.mix(#00000000, 0.45);
+            animate background { duration: 100ms; }
+            y: (parent.height - self.height) / 2;
+        }
+
+        VerticalLayout {
+            padding-top: 8px * Palette.scale;
+            padding-bottom: 8px * Palette.scale;
+            spacing: 5px * Palette.scale;
+            horizontal-stretch: 1;
+
+            HorizontalLayout {
+                Text {
+                    text: project-title;
+                    color: ta.has-hover ? Palette.text-primary : Palette.text-secondary;
+                    font-size: 12px * Palette.scale;
+                    vertical-alignment: center;
+                    animate color { duration: 100ms; }
+                    overflow: elide;
+                    horizontal-stretch: 1;
+                }
+
+                Text {
+                    text: duration;
+                    color: ta.has-hover ? bar-color : bar-color.mix(#00000000, 0.45);
+                    font-size: 10px * Palette.scale;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    animate color { duration: 100ms; }
+                }
+            }
+
+            Rectangle {
+                height: 4px * Palette.scale;
+                border-radius: 2px * Palette.scale;
+                background: Palette.bar-track;
+
+                Rectangle {
+                    x: 0;
+                    height: 4px * Palette.scale;
+                    border-radius: 2px * Palette.scale;
+                    width: parent.width * ratio;
+                    background: ta.has-hover
+                        ? @linear-gradient(90deg, bar-color 0%, bar-color.mix(#ffffff, 0.3) 100%)
+                        : @linear-gradient(90deg, bar-color.mix(#00000000, 0.45) 0%, bar-color.mix(#ffffff, 0.15).mix(#00000000, 0.45) 100%);
+                    animate background { duration: 100ms; }
+                    animate width { duration: 400ms; easing: ease-out; }
+                }
+            }
+        }
+    }
+    ta := TouchArea {}
+}
+
+component ViewToggleButton inherits Rectangle {
+    in property <string> label;
+    in property <color> base-color;
+    in property <color> hover-color;
+    in property <color> pressed-color;
+    
+    in property <color> normal-bg-color;
+    in property <color> hover-bg-color;
+    in property <color> pressed-bg-color;
+    
+    in property <color> normal-border-color;
+    in property <color> hover-border-color;
+    in property <color> pressed-border-color;
+
+    callback clicked;
+
+    width: 60px * Palette.scale;
+    height: 24px * Palette.scale;
+    border-radius: 5px * Palette.scale;
+    border-width: 1px * Palette.scale;
+
+    animate background { duration: 100ms; }
+    animate border-color { duration: 100ms; }
+
+    states [
+        pressed when ta.pressed: {
+            background: pressed-bg-color;
+            border-color: pressed-border-color;
+        }
+        hovered when ta.has-hover: {
+            background: hover-bg-color;
+            border-color: hover-border-color;
+        }
+        normal when !ta.has-hover: {
+            background: normal-bg-color;
+            border-color: normal-border-color;
+        }
+    ]
+
+    Text {
+        text: label;
+        font-size: 10px * Palette.scale;
+        font-weight: 600;
+        color: ta.pressed ? pressed-color : ta.has-hover ? hover-color : base-color;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        animate color { duration: 100ms; }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component ProjectView {
+    in property <[TimeLog_Project]> timePerProject_S;
+    in property <int>               trackedTime_S;
+    callback raw-view-clicked;
+    callback filter-view-clicked;
+
+    VerticalLayout {
+        padding: 12px * Palette.scale;
+        padding-top: 0px;
+        spacing: 10px * Palette.scale;
+        height: 100%;
+
+        HorizontalLayout {
+            vertical-stretch: 0;
+
+            SectionHeader {
+                label: "TIME PER PROJECT";
+                horizontal-stretch: 1;
+            }
+
+            HorizontalLayout {
+                spacing: 4px * Palette.scale;
+                alignment: end;
+
+                ViewToggleButton {
+                    label: "Raw";
+                    base-color: #fb923c;
+                    hover-color: #fdba74;
+                    pressed-color: #fed7aa;
+                    normal-bg-color: #fb923c12;
+                    hover-bg-color: #fb923c25;
+                    pressed-bg-color: #fb923c35;
+                    normal-border-color: #fb923c35;
+                    hover-border-color: #fb923c60;
+                    pressed-border-color: #fb923c80;
+                    clicked => { root.raw-view-clicked(); }
+                }
+
+                ViewToggleButton {
+                    label: "Filtered";
+                    base-color: #22d3ee;
+                    hover-color: #67e8f9;
+                    pressed-color: #99f6e4;
+                    normal-bg-color: #22d3ee12;
+                    hover-bg-color: #22d3ee25;
+                    pressed-bg-color: #22d3ee35;
+                    normal-border-color: #22d3ee35;
+                    hover-border-color: #22d3ee60;
+                    pressed-border-color: #22d3ee80;
+                    clicked => { root.filter-view-clicked(); }
+                }
+            }
+        }
+
+        Card {
+            vertical-stretch: 1;
+
+            Flickable {
+                width: 100%;
+                height: 100%;
+                interactive: true;
+                viewport-height: projectContent.preferred-height;
+
+                projectContent := VerticalLayout {
+                    width: 100%;
+                    for entry[i] in timePerProject_S: ProjectRow {
+                        project-title: entry.name;
+                        ratio: trackedTime_S > 0
+                            ? (entry.duration_i * 1.0) / (trackedTime_S * 1.0)
+                            : 0.0;
+                        duration: entry.duration
+                            + " (" + Math.round(self.ratio * 100) + "%" + ")";
+                        is-even:   mod(i, 2) == 0;
+                        row-index: i;
+                        bar-color: Colors.hsv(
+                            mod(entry.name.character-count * 83, 360),
+                            0.70, 0.88
+                        );
+                    }
+                }
+            }
+        }
+    }
+}

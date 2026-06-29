@@ -1,0 +1,374 @@
+import { Card } from "./card.slint";
+import { SectionHeader } from "./section-header.slint";
+import { Palette } from "./palette.slint";
+
+export component ThemesView {
+    in property <bool> themesAvailable;
+    in property <[string]> themesList;
+    in property <[image]> themePreviewImages;
+    in property <int> themePreviewImageCount;
+    in-out property <int> currentImageIndex: 0;
+    in property <string> appVersion;
+    in property <string> themeVersion;
+    in property <bool> useThemesEnabled;
+    in-out property <string> currentTheme;
+    in property <string> activeTheme;
+
+    callback themeSelected(string);
+    callback themeApply(string);
+    callback refresh-themes();
+
+    // internal callback to bridge popup -> root (PopupWindow can't access outside props)
+    callback theme-picked(string);
+    theme-picked(val) => {
+        root.currentTheme = val;
+        root.currentImageIndex = 0;
+        root.themeSelected(val);
+    }
+
+    property <length> btn-height: 32px * Palette.scale;
+
+    VerticalLayout {
+        alignment: start;
+        padding: 12px * Palette.scale;
+        padding-top: 6px * Palette.scale;
+        spacing: 10px * Palette.scale;
+
+        HorizontalLayout {
+            alignment: space-between;
+            vertical-stretch: 0;
+            padding-top: 4px * Palette.scale;
+
+            SectionHeader { label: "THEMES"; }
+
+            refreshBtn := Rectangle {
+                width: 72px * Palette.scale;
+                height: 26px * Palette.scale;
+                border-radius: 6px * Palette.scale;
+                border-width: 1px * Palette.scale;
+
+                animate background { duration: 100ms; }
+                animate border-color { duration: 100ms; }
+
+                ta-refresh := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.refresh-themes(); }
+                }
+
+                states [
+                    pressed when ta-refresh.pressed: {
+                        background: #34d39935;
+                        border-color: #34d39980;
+                    }
+                    hovered when ta-refresh.has-hover: {
+                        background: #34d39925;
+                        border-color: #34d39960;
+                    }
+                    normal when !ta-refresh.has-hover: {
+                        background: #34d39912;
+                        border-color: #34d39935;
+                    }
+                ]
+
+                Text {
+                    text: "RESCAN";
+                    font-size: 8px * Palette.scale;
+                    font-weight: 700;
+                    letter-spacing: 2px * Palette.scale;
+                    color: ta-refresh.pressed ? #a7f3d0 : ta-refresh.has-hover ? #6ee7b7 : #34d399;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    animate color { duration: 100ms; }
+                }
+            }
+        }
+
+        if !root.useThemesEnabled : Rectangle {
+            background: #ef444415;
+            border-color: #ef444450;
+            border-width: 1px * Palette.scale;
+            border-radius: 6px * Palette.scale;
+            vertical-stretch: 0;
+
+            HorizontalLayout {
+                padding: 12px * Palette.scale;
+                spacing: 8px * Palette.scale;
+                alignment: start;
+
+                Text {
+                    text: "!";
+                    font-size: 14px * Palette.scale;
+                    color: #ef4444;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: "Custom UI Themes are currently disabled. Please enable the 'Enable Custom UI Themes' setting in Settings to enable theming.";
+                    font-size: 11px * Palette.scale;
+                    color: #ef4444;
+                    wrap: word-wrap;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        if root.useThemesEnabled : Card {
+            vertical-stretch: 0;
+            VerticalLayout {
+                padding: 10px * Palette.scale;
+                spacing: 8px * Palette.scale;
+
+                Text {
+                    text: "CHOOSE YOUR THEME:";
+                    font-size: 8px * Palette.scale;
+                    font-weight: 700;
+                    letter-spacing: 2.5px * Palette.scale;
+                    color: Palette.text-muted;
+                }
+
+                if !root.themesAvailable : Text {
+                    text: "No themes installed";
+                    font-size: 13px * Palette.scale;
+                    font-weight: 500;
+                    color: Palette.text-secondary;
+                }
+
+                if root.themesAvailable : VerticalLayout {
+                    spacing: 8px * Palette.scale;
+
+                    HorizontalLayout {
+                        spacing: 12px * Palette.scale;
+                        alignment: start;
+                        height: root.btn-height;
+
+                        custom-dropdown := Rectangle {
+                            width: 220px * Palette.scale;
+                            height: root.btn-height;
+                            border-radius: 6px * Palette.scale;
+                            border-width: 1px * Palette.scale;
+                            background: ta-drop.has-hover ? Palette.input-bg-hover : Palette.input-bg;
+                            border-color: ta-drop.has-hover ? Palette.input-border-hover : Palette.input-border;
+                            animate background { duration: 100ms; }
+                            animate border-color { duration: 100ms; }
+
+                            popup := PopupWindow {
+                                x: 0px;
+                                y: root.btn-height + 2px * Palette.scale;
+                                width: 220px * Palette.scale;
+                                height: min(root.themesList.length * (28px * Palette.scale), 180px * Palette.scale);
+                                close-policy: close-on-click-outside;
+
+                                Rectangle {
+                                    width: 100%;
+                                    height: 100%;
+                                    background: Palette.card-background;
+                                    border-radius: 6px * Palette.scale;
+                                    border-width: 1px * Palette.scale;
+                                    border-color: Palette.card-border;
+                                    clip: true;
+
+                                    VerticalLayout {
+                                        alignment: start;
+                                        for theme[i] in root.themesList : Rectangle {
+                                            height: 28px * Palette.scale;
+                                            background: ta-item.has-hover ? Palette.input-bg-hover : transparent;
+                                            animate background { duration: 80ms; }
+
+                                            ta-item := TouchArea {
+                                                mouse-cursor: pointer;
+                                                clicked => {
+                                                    root.theme-picked(theme);
+                                                    popup.close();
+                                                }
+                                            }
+
+                                            Text {
+                                                text: theme;
+                                                font-size: 12px * Palette.scale;
+                                                color: Palette.text-secondary;
+                                                vertical-alignment: center;
+                                                x: 10px * Palette.scale;
+                                                width: parent.width - 10px * Palette.scale;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            ta-drop := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { popup.show(); }
+                            }
+
+                            HorizontalLayout {
+                                padding-left: 10px * Palette.scale;
+                                padding-right: 8px * Palette.scale;
+                                spacing: 4px * Palette.scale;
+
+                                Text {
+                                    text: root.currentTheme;
+                                    font-size: 12px * Palette.scale;
+                                    color: Palette.text-primary;
+                                    vertical-alignment: center;
+                                    horizontal-stretch: 1;
+                                    overflow: elide;
+                                }
+
+                                Text {
+                                    text: "▼";
+                                    font-size: 8px * Palette.scale;
+                                    color: Palette.text-secondary;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+
+                        apply-btn := Rectangle {
+                            width: 90px * Palette.scale;
+                            height: root.btn-height;
+                            border-radius: 6px * Palette.scale;
+                            background: ta-apply.pressed
+                                ? @linear-gradient(135deg, #0284c7 0%, #0369a1 100%)
+                                : (ta-apply.has-hover
+                                    ? @linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%)
+                                    : @linear-gradient(135deg, #38bdf8 0%, #0284c7 100%));
+                            border-width: 1px * Palette.scale;
+                            border-color: ta-apply.has-hover ? #38bdf880 : #38bdf840;
+
+                            animate background { duration: 100ms; }
+                            animate border-color { duration: 100ms; }
+
+                            ta-apply := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.themeApply(root.currentTheme); }
+                            }
+
+                            Text {
+                                text: "APPLY";
+                                color: #ffffff;
+                                font-size: 10px * Palette.scale;
+                                font-weight: 800;
+                                letter-spacing: 1px * Palette.scale;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Text {
+                            text: "Current theme: " + root.activeTheme;
+                            font-size: 11px * Palette.scale;
+                            color: Palette.text-secondary;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    if root.themeVersion != "" && root.appVersion != "" && root.themeVersion != root.appVersion : Rectangle {
+                        background: #f59e0b15;
+                        border-color: #f59e0b50;
+                        border-width: 1px * Palette.scale;
+                        border-radius: 6px * Palette.scale;
+
+                        HorizontalLayout {
+                            padding: 8px * Palette.scale;
+                            spacing: 8px * Palette.scale;
+                            alignment: start;
+
+                            Text {
+                                text: "⚠";
+                                font-size: 14px * Palette.scale;
+                                color: #f59e0b;
+                                vertical-alignment: center;
+                            }
+
+                            Text {
+                                text: "This theme (v" + root.themeVersion + ") does not match the current HPR version (v" + root.appVersion + "). It may or may not work.";
+                                font-size: 11px * Palette.scale;
+                                color: #f59e0b;
+                                wrap: word-wrap;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if root.useThemesEnabled && root.themesAvailable : HorizontalLayout {
+            vertical-stretch: 3;
+            alignment: center;
+            padding-top: 16px * Palette.scale;
+
+            if root.themePreviewImageCount > 0 : Rectangle {
+                width: root.width * 0.9;
+                border-radius: 8px * Palette.scale;
+                border-width: 1px * Palette.scale;
+                border-color: Palette.card-border;
+                background: Palette.card-background;
+                clip: true;
+
+                Image {
+                    width: 100%;
+                    height: 100%;
+                    source: root.themePreviewImages[root.currentImageIndex];
+                    image-fit: contain;
+                }
+
+                if root.themePreviewImageCount > 1 : Rectangle {
+                    x: 12px * Palette.scale;
+                    y: (parent.height - self.height) / 2;
+                    width: 36px * Palette.scale;
+                    height: 36px * Palette.scale;
+                    border-radius: 18px * Palette.scale;
+                    background: (root.currentImageIndex <= 0)
+                        ? #00000033
+                        : (ta-prev.pressed ? #00000099 : (ta-prev.has-hover ? #00000077 : #00000055));
+                    border-width: 1px * Palette.scale;
+                    border-color: (root.currentImageIndex <= 0) ? #ffffff11 : #ffffff33;
+
+                    ta-prev := TouchArea {
+                        enabled: root.currentImageIndex > 0;
+                        mouse-cursor: self.enabled ? pointer : default;
+                        clicked => { root.currentImageIndex -= 1; }
+                    }
+
+                    Text {
+                        text: "‹";
+                        font-size: 24px * Palette.scale;
+                        font-weight: 700;
+                        color: (root.currentImageIndex <= 0) ? #ffffff44 : #ffffff;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                if root.themePreviewImageCount > 1 : Rectangle {
+                    x: parent.width - self.width - 12px * Palette.scale;
+                    y: (parent.height - self.height) / 2;
+                    width: 36px * Palette.scale;
+                    height: 36px * Palette.scale;
+                    border-radius: 18px * Palette.scale;
+                    background: (root.currentImageIndex >= root.themePreviewImageCount - 1)
+                        ? #00000033
+                        : (ta-next.pressed ? #00000099 : (ta-next.has-hover ? #00000077 : #00000055));
+                    border-width: 1px * Palette.scale;
+                    border-color: (root.currentImageIndex >= root.themePreviewImageCount - 1) ? #ffffff11 : #ffffff33;
+
+                    ta-next := TouchArea {
+                        enabled: root.currentImageIndex < root.themePreviewImageCount - 1;
+                        mouse-cursor: self.enabled ? pointer : default;
+                        clicked => { root.currentImageIndex += 1; }
+                    }
+
+                    Text {
+                        text: "›";
+                        font-size: 24px * Palette.scale;
+                        font-weight: 700;
+                        color: (root.currentImageIndex >= root.themePreviewImageCount - 1) ? #ffffff44 : #ffffff;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}

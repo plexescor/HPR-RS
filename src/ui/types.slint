@@ -1,0 +1,46 @@
+export struct TimeLog {
+    name: string,
+    duration: string,
+    duration_i: float,
+}
+
+export struct TimeLog_Tab{
+    name: string,
+    duration: string,
+    duration_i: float,
+}
+
+export struct TimeLog_Project {
+    name: string,
+    duration: string,
+    duration_i: float,
+}
+
+export struct SwitchHistory {
+    fromWindow: string,
+    toWindow: string,
+    maxTimeStamp: string,
+}
+
+export struct AppGoalData {
+    name: string,
+    raw_name: string,
+    limit_mins: int,
+    goal_mins: int,
+    limit_remaining: string,
+    goal_remaining: string,
+}
+
+export struct TimelineBlock {
+    x: float,
+    width: float,
+    color: color,
+    appName: string,
+    duration: string,
+    timeRange: string,
+}
+
+export struct TimelineMarker {
+    x: float,
+    label: string,
+}
